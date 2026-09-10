@@ -10,6 +10,33 @@
 - 按品牌 / 产品类型 / 归档年份 / 并网能力 / 离网输出 / AC 输入 / 市电旁路自动切换 多维筛选
 - 容量 × 最高并网输出气泡矩阵，点击圆点联动筛选表格
 - 一键导出当前筛选结果为 CSV（含官方链接）
+- **表格直接编辑**：点单元格即可改，改动自动保存回 GitHub（见下节）
+
+## 云同步：本地修改自动保存云端
+
+在页面上直接改任意单元格后，改动会先落在本机浏览器，约 4 秒后自动提交到本仓库的 `data/overrides.json`，GitHub Pages 约 1 分钟后生效。换设备或换个浏览器打开，看到的就是最新数据。
+
+**首次使用需要连接一次 GitHub（约 1 分钟，只需做一次）**
+
+1. 打开页面顶部的「云同步」面板，点 **连接 GitHub**
+2. 打开 <https://github.com/settings/personal-access-tokens/new> 生成 Fine-grained token：
+   - Repository access 选 **Only select repositories** → `balcony-storage-timeline`
+   - Permissions → Repository permissions → **Contents: Read and write**
+3. 把 `github_pat_...` 粘贴进输入框，点 **保存并连接**
+
+令牌只存在你本机浏览器的 localStorage，不会写进仓库，也不会发到任何第三方服务器。
+
+**工作机制**
+
+| 环节 | 说明 |
+| --- | --- |
+| 存储内容 | 只提交「改动」：`data/overrides.json` 记录被修改的字段、新增行、删除行与矩阵布局，不整表覆盖 `index.html` |
+| 自动保存 | 编辑后 4 秒触发；可关掉「自动保存」开关，改用「立即同步」手动提交 |
+| 离线 | 断网时改动存在本机，恢复网络后自动补交 |
+| 冲突 | 云端有新版本且本机有未同步改动时，弹条让你选「用云端覆盖本机」或「把本机改动推上云端」 |
+| 撤销 | 编辑中按 `Esc` 撤销单个单元格；每一次同步都是一次 Git commit，可在「云端修改历史」里查看或回滚 |
+
+页面内嵌的原始数据仍以 `index.html` 的 `dataset` 为准，云端改动是叠加在其上的一层覆盖。
 
 ## 状态标记说明
 
