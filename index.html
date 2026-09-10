@@ -35,7 +35,7 @@ const matrixLayoutKey='balcony-matrix-layout-v1';
 const matrixLayout=()=>JSON.parse(localStorage.getItem(matrixLayoutKey)||'{}');
 function quarterLabel(r){const m=String(r.dateNote||'').match(/^(\d{4})(?:-(\d{2}))?/);if(!m)return null;return `${m[1]} Q${m[2]?Math.ceil(Number(m[2])/3):1}`;}
 function renderMatrix(items){
- const brands=['Anker','EcoFlow','Jackery','Marstek','Zendure'],typeColor={'分体式':'#9ba7b8','一体式DC耦合':'#3786ed','一体化AC耦合':'#f0a10b'},pts=items.map(r=>({r,x:quarterLabel(r),cap:capacityNumber(r),monthKnown:/^\d{4}-\d{2}/.test(String(r.dateNote||''))})).filter(p=>p.x),svg=$('matrix'),tip=$('tooltip'),legend=$('matrixlegend'),W=1500,H=1700,L=120,R=25,T=70,B=28;
+ const brands=['Anker','EcoFlow','Jackery','Marstek','Zendure'].filter(b=>items.some(r=>r.brand===b)),typeColor={'分体式':'#9ba7b8','一体式DC耦合':'#3786ed','一体化AC耦合':'#f0a10b'},pts=items.map(r=>({r,x:quarterLabel(r),cap:capacityNumber(r),monthKnown:/^\d{4}-\d{2}/.test(String(r.dateNote||''))})).filter(p=>p.x),svg=$('matrix'),tip=$('tooltip'),legend=$('matrixlegend'),W=1500,H=Math.max(380,70+brands.length*320),L=120,R=25,T=70,B=28;
  if(!pts.length){svg.setAttribute('viewBox',`0 0 ${W} ${H}`);svg.innerHTML=`<text x="${W/2}" y="${H/2}" text-anchor="middle" class="axis">当前筛选没有可绘制的产品</text>`;legend.innerHTML='';return;}
  const years=[...new Set(pts.map(p=>Number(p.x.slice(0,4))))].sort((a,b)=>a-b),labels=years.flatMap(year=>[1,2,3,4].map(q=>`${year} Q${q}`)),sx=x=>L+(labels.indexOf(x)+.5)/labels.length*(W-L-R),laneTop=b=>T+30+brands.indexOf(b)*320,lines=[];
  years.forEach((year,yi)=>{const start=L+yi*4/labels.length*(W-L-R),w=4/labels.length*(W-L-R);lines.push(`<text class="axis" x="${start+w/2}" y="20" text-anchor="middle" style="font-weight:700;fill:#34443d">${year}</text>`);});
