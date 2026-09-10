@@ -32,8 +32,18 @@ function capacityNumber(r){const text=String(r.capacity||'');if(/主机无电池
 const brandColor={EcoFlow:'#11a681',Anker:'#2674de',Zendure:'#e0a117',Jackery:'#e96832',Marstek:'#8556d6'};
 let matrixEdit=false;
 const matrixLayoutKey='balcony-matrix-layout-v1';
+const defaultMatrixLayout={
+ 'SOLIX Solarbank E1600:label':{dx:131.64741400690616,dy:3.827479634469733},
+ 'SolarFlow / PVHub 1200:label':{dx:127.85928229391227,dy:2.6470419901940208},
+ 'SolarFlow 800 Pro 2:label':{dx:92.46403838449358,dy:-0.05365625655798691},
+ 'SolarFlow 4000 Mix AC+:label':{dx:-116.26237670984604,dy:-6.503138294828013},
+ 'SolarFlow 800 Pro 2:point':{dx:-22.600015262224087,dy:-19.402102371368066},
+ 'SolarFlow 800 Plus:point':{dx:65.11007879123186,dy:7.054009195490012},
+ 'STREAM Ultra:point':{dx:-52.81206478814125,dy:-34.44373962645707},
+ 'STREAM Ultra:label':{dx:-59.32235725051033,dy:-59.02545929755613}
+};
 const sharedLayout=()=>{try{const raw=new URLSearchParams(location.hash.slice(1)).get('layout');return raw?JSON.parse(decodeURIComponent(raw)):null}catch{return null}};
-const matrixLayout=()=>sharedLayout()||JSON.parse(localStorage.getItem(matrixLayoutKey)||'{}');
+const matrixLayout=()=>({...defaultMatrixLayout,...JSON.parse(localStorage.getItem(matrixLayoutKey)||'{}'),...(sharedLayout()||{})});
 function quarterLabel(r){const m=String(r.dateNote||'').match(/^(\d{4})(?:-(\d{2}))?/);if(!m)return null;return `${m[1]} Q${m[2]?Math.ceil(Number(m[2])/3):1}`;}
 function renderMatrix(items){
  const brands=['Anker','EcoFlow','Jackery','Marstek','Zendure'].filter(b=>items.some(r=>r.brand===b)),typeColor={'分体式':'#9ba7b8','一体式DC耦合':'#3786ed','一体化AC耦合':'#f0a10b'},pts=items.map(r=>({r,x:quarterLabel(r),cap:capacityNumber(r),monthKnown:/^\d{4}-\d{2}/.test(String(r.dateNote||''))})).filter(p=>p.x),svg=$('matrix'),tip=$('tooltip'),legend=$('matrixlegend'),W=1500,H=Math.max(380,70+brands.length*320),L=120,R=25,T=70,B=28;
