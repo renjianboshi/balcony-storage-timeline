@@ -32,7 +32,7 @@ function capacityNumber(r){const text=String(r.capacity||'');if(/主机无电池
 const brandColor={EcoFlow:'#11a681',Anker:'#2674de',Zendure:'#e0a117',Jackery:'#e96832',Marstek:'#8556d6'};
 let matrixEdit=false;
 const matrixLayoutKey='balcony-matrix-layout-v1';
-const githubTokenKey='balcony-github-token-v1',githubLayoutPath='layouts/matrix-layout.json',githubRepo='renjianboshi/balcony-storage-timeline';
+const githubTokenKey='balcony-github-token-v1',githubSyncConfirmedKey='balcony-github-sync-confirmed-v1',githubLayoutPath='layouts/matrix-layout.json',githubRepo='renjianboshi/balcony-storage-timeline';
 let remoteMatrixLayout={};
 const defaultMatrixLayout={
  'SOLIX Solarbank E1600:label':{dx:131.64741400690616,dy:3.827479634469733},
@@ -100,7 +100,7 @@ $('editMatrix').onclick=()=>{matrixEdit=!matrixEdit;$('editMatrix').textContent=
 $('resetMatrix').onclick=()=>{localStorage.removeItem(matrixLayoutKey);render();};
 $('saveMatrix').onclick=()=>saveLayoutToGithub(matrixLayout());
 const toBase64=v=>btoa(unescape(encodeURIComponent(v)));
-async function saveLayoutToGithub(layout){const token=localStorage.getItem(githubTokenKey);if(!token){$('matrixEditHint').textContent='布局已保存到本地';return;}try{const url=`https://api.github.com/repos/${githubRepo}/contents/${githubLayoutPath}`;const h={Authorization:`Bearer ${token}`,Accept:'application/vnd.github+json'};const old=await fetch(url,{headers:h}).then(r=>r.ok?r.json():null);const body={message:'Update matrix layout',content:toBase64(JSON.stringify(layout,null,2)),branch:'main'};if(old?.sha)body.sha=old.sha;const res=await fetch(url,{method:'PUT',headers:{...h,'Content-Type':'application/json'},body:JSON.stringify(body)});$('matrixEditHint').textContent=res.ok?'已自动同步到云端':'云端同步失败';}catch{$('matrixEditHint').textContent='云端同步失败';}}
+async function saveLayoutToGithub(layout){if(!localStorage.getItem(githubSyncConfirmedKey)){if(!confirm('确认将当前矩阵布局保存到云端？'))return;localStorage.setItem(githubSyncConfirmedKey,'1');}const token=localStorage.getItem(githubTokenKey);if(!token){$('matrixEditHint').textContent='已确认云端保存；布局暂存本地';return;}try{const url=`https://api.github.com/repos/${githubRepo}/contents/${githubLayoutPath}`;const h={Authorization:`Bearer ${token}`,Accept:'application/vnd.github+json'};const old=await fetch(url,{headers:h}).then(r=>r.ok?r.json():null);const body={message:'Update matrix layout',content:toBase64(JSON.stringify(layout,null,2)),branch:'main'};if(old?.sha)body.sha=old.sha;const res=await fetch(url,{method:'PUT',headers:{...h,'Content-Type':'application/json'},body:JSON.stringify(body)});$('matrixEditHint').textContent=res.ok?'已自动同步到云端':'云端同步失败';}catch{$('matrixEditHint').textContent='云端同步失败';}}
 async function loadLayoutFromGithub(){try{const r=await fetch(`https://raw.githubusercontent.com/${githubRepo}/main/${githubLayoutPath}`);if(r.ok){remoteMatrixLayout=await r.json();render();}}catch{}}
 render();
 loadLayoutFromGithub();
