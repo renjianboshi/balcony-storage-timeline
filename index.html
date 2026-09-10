@@ -7,7 +7,7 @@
 <main>
 <section class="panel"><div class="filters">
 <label>品牌<select id="brand"><option value="">全部品牌</option></select></label>
-<label>产品类型<select id="productType"><option value="">全部类型</option></select></label>
+<label>产品类型<select id="productType"><option value="">全部类型</option><option value="expandable">可堆叠扩容</option></select></label>
 <label>归档年份<select id="year"><option value="">全部年份</option></select></label>
 <label>并网能力<select id="grid"><option value="">全部</option><option value="800">明确含 800 W / VA</option><option value="high">明确高于 800 W / VA</option><option value="external">依外置微逆</option></select></label>
 <label>离网输出<select id="off"><option value="">全部</option><option value="yes">有明确输出</option><option value="conditional">有条件／部分待核</option></select></label>
@@ -32,19 +32,21 @@ function capacityNumber(r){const text=String(r.capacity||'');if(/主机无电池
 const brandColor={EcoFlow:'#11a681',Anker:'#2674de',Zendure:'#e0a117',Jackery:'#e96832',Marstek:'#8556d6'};
 function quarterLabel(r){const m=String(r.dateNote||'').match(/^(\d{4})(?:-(\d{2}))?/);if(!m)return null;return `${m[1]} Q${m[2]?Math.ceil(Number(m[2])/3):1}`;}
 function renderMatrix(items){
- const brands=['Anker','EcoFlow','Jackery','Marstek','Zendure'],typeColor={'分体式':'#9ba7b8','一体式DC耦合':'#3786ed','一体化AC耦合':'#f0a10b'},pts=items.map(r=>({r,x:quarterLabel(r),cap:capacityNumber(r)})).filter(p=>p.x),svg=$('matrix'),tip=$('tooltip'),legend=$('matrixlegend'),W=1500,H=720,L=120,R=25,T=70,B=28;
+ const brands=['Anker','EcoFlow','Jackery','Marstek','Zendure'],typeColor={'分体式':'#9ba7b8','一体式DC耦合':'#3786ed','一体化AC耦合':'#f0a10b'},pts=items.map(r=>({r,x:quarterLabel(r),cap:capacityNumber(r)})).filter(p=>p.x),svg=$('matrix'),tip=$('tooltip'),legend=$('matrixlegend'),W=1500,H=1010,L=120,R=25,T=70,B=28;
  if(!pts.length){svg.setAttribute('viewBox',`0 0 ${W} ${H}`);svg.innerHTML=`<text x="${W/2}" y="${H/2}" text-anchor="middle" class="axis">当前筛选没有可绘制的产品</text>`;legend.innerHTML='';return;}
- const years=[...new Set(pts.map(p=>Number(p.x.slice(0,4))))].sort((a,b)=>a-b),labels=years.flatMap(year=>[1,2,3,4].map(q=>`${year} Q${q}`)),sx=x=>L+(labels.indexOf(x)+.5)/labels.length*(W-L-R),lane=b=>T+55+brands.indexOf(b)*(H-T-B-55)/(brands.length-1),lines=[];
+ const years=[...new Set(pts.map(p=>Number(p.x.slice(0,4))))].sort((a,b)=>a-b),labels=years.flatMap(year=>[1,2,3,4].map(q=>`${year} Q${q}`)),sx=x=>L+(labels.indexOf(x)+.5)/labels.length*(W-L-R),laneTop=b=>T+30+brands.indexOf(b)*180,lines=[];
  years.forEach((year,yi)=>{const start=L+yi*4/labels.length*(W-L-R),w=4/labels.length*(W-L-R);lines.push(`<text class="axis" x="${start+w/2}" y="20" text-anchor="middle" style="font-weight:700;fill:#34443d">${year}</text>`);});
  labels.forEach((v,i)=>{const x=sx(v);lines.push(`<line class="gridline" x1="${L+i/labels.length*(W-L-R)}" y1="${T}" x2="${L+i/labels.length*(W-L-R)}" y2="${H-B}"/><text class="axis" x="${x}" y="43" text-anchor="middle" style="font-weight:${v.endsWith('Q1')?'700':'400'}">${v.slice(5)}</text>`);});
- brands.forEach(b=>{const y=lane(b);lines.push(`<line class="gridline" x1="${L}" y1="${y}" x2="${W-R}" y2="${y}"/><text x="${L-14}" y="${y-4}" text-anchor="end" style="font-size:13px;font-weight:700;fill:#253c33">${b}</text><text class="axis" x="${L-14}" y="${y+12}" text-anchor="end">${pts.filter(p=>p.r.brand===b).length} 款</text>`);});
- svg.setAttribute('viewBox',`0 0 ${W} ${H}`);svg.innerHTML=`${lines.join('')}<line stroke="#a8b8b0" x1="${L}" y1="${T}" x2="${W-R}" y2="${T}"/>${pts.map((p,i)=>{const y=lane(p.r.brand)+(i%2?13:-13),c=typeColor[p.r.productType]||'#b679e8',r=Math.max(5,Math.min(13,5+Math.sqrt(p.cap||0)*2)),info=esc(`${p.r.brand} · ${p.r.model}｜${p.x}｜${p.cap?`单包 ${p.cap} kWh`:'无内置电池'}`),name=esc(p.r.model),detail=esc(`${p.cap?`${p.cap}kWh · `:''}${(gridNumbers(p.r)[0]||'—')}W`);return `<g class="dot" tabindex="0" role="img" aria-label="${info}" data-info="${info}"><circle cx="${sx(p.x)}" cy="${y}" r="${r}" fill="${c}" stroke="#fff" stroke-width="2"/><text x="${sx(p.x)}" y="${y-17}" text-anchor="middle" style="font-size:9px;font-weight:700;fill:#253c33">${name}</text><text x="${sx(p.x)}" y="${y+24}" text-anchor="middle" style="font-size:8px;fill:#66766e">${detail}</text></g>`;}).join('')}`;
+ brands.forEach(b=>{const y=laneTop(b)+65;lines.push(`<line class="gridline" x1="${L}" y1="${y}" x2="${W-R}" y2="${y}"/><text x="${L-14}" y="${y-4}" text-anchor="end" style="font-size:13px;font-weight:700;fill:#253c33">${b}</text><text class="axis" x="${L-14}" y="${y+12}" text-anchor="end">${pts.filter(p=>p.r.brand===b).length} 款</text>`);});
+ const grouped={};pts.forEach(p=>{const key=p.r.brand+'|'+p.x;(grouped[key]??=[]).push(p)});Object.values(grouped).forEach(g=>g.forEach((p,i)=>p.slot=i));
+ svg.setAttribute('viewBox',`0 0 ${W} ${H}`);svg.innerHTML=`${lines.join('')}<line stroke="#a8b8b0" x1="${L}" y1="${T}" x2="${W-R}" y2="${T}"/>${pts.map(p=>{const y=laneTop(p.r.brand)+28+p.slot*47,c=typeColor[p.r.productType]||'#b679e8',r=Math.max(5,Math.min(13,5+Math.sqrt(p.cap||0)*2)),max=Math.max(...gridNumbers(p.r)),info=esc(`${p.r.brand} · ${p.r.model}｜${p.x}｜${p.cap?`单包 ${p.cap} kWh`:'无内置电池'}｜最高输出 ${Number.isFinite(max)?max:'—'} W`),name=esc(p.r.model),detail=esc(`${p.cap?`${p.cap}kWh · `:''}最大 ${Number.isFinite(max)?max:'—'}W`);return `<g class="dot" tabindex="0" role="img" aria-label="${info}" data-info="${info}"><circle cx="${sx(p.x)}" cy="${y}" r="${r}" fill="${c}" stroke="#fff" stroke-width="2"/><text x="${sx(p.x)}" y="${y+21}" text-anchor="middle" style="font-size:9px;font-weight:700;fill:#253c33">${name}</text><text x="${sx(p.x)}" y="${y+34}" text-anchor="middle" style="font-size:8px;fill:#66766e">${detail}</text></g>`;}).join('')}`;
  legend.innerHTML=[['分体式','分体式（需外接微逆）'],['一体式DC耦合','一体式 DC 耦合（内置 MPPT）'],['一体化AC耦合','一体化 AC 耦合']].map(([k,t])=>`<span style="--c:${typeColor[k]}">${t}</span>`).join('')+'<span style="--c:#657487">圆点大小＝单包容量</span>';
  svg.querySelectorAll('.dot').forEach(dot=>{const show=e=>{tip.textContent=dot.dataset.info;tip.style.display='block';const box=svg.getBoundingClientRect();tip.style.left=`${Math.min(e.clientX-box.left+12,box.width-260)}px`;tip.style.top=`${Math.max(e.clientY-box.top-52,8)}px`;};dot.addEventListener('mouseenter',show);dot.addEventListener('mousemove',show);dot.addEventListener('mouseleave',()=>tip.style.display='none');dot.addEventListener('focus',e=>show(e));dot.addEventListener('blur',()=>tip.style.display='none');});
 }
 function selectRows(s){return rows.filter(r=>{
  if(s.brand&&r.brand!==s.brand)return false;
- if(s.productType&&r.productType!==s.productType)return false;
+ if(s.productType==='expandable'&&!/堆叠|扩展电池|最多.*块|主机.*块/.test(r.stack))return false;
+ if(s.productType&&s.productType!=='expandable'&&r.productType!==s.productType)return false;
  if(s.year&&(s.year==='unknown'?r.year!==null:String(r.year)!==s.year))return false;
  if(s.grid==='800'&&!gridNumbers(r).includes(800))return false;
  if(s.grid==='high'&&!gridNumbers(r).some(n=>n>800))return false;
