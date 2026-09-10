@@ -14,7 +14,7 @@
 <label>AC输入<select id="ac"><option value="">全部</option><option value="yes">明确支持</option><option value="conditional">有条件／部分待核</option></select></label>
 <label>市电旁路→电池自动切换<select id="bypass"><option value="">全部</option><option value="yes">明确支持</option><option value="conditional">有条件／部分待核</option><option value="no">无 /</option></select></label>
 </div><div class="actions"><span id="count" role="status" aria-live="polite"></span><button id="reset">重置筛选</button><button id="export" class="primary">导出当前 CSV（含官方链接）</button></div></section>
-<section class="panel matrix" aria-labelledby="matrix-title"><h2 id="matrix-title">阳台储能头部品牌产品演进时间线</h2><p>横轴为上市时间，纵轴按品牌分行。圆点颜色代表产品类型，圆点大小代表单包容量；年份级记录以 * 标示月份未公开。</p><div class="actions"><span id="matrixEditHint" class="small">布局锁定</span><button id="editMatrix">编辑布局</button><button id="resetMatrix">恢复矩阵布局</button></div><div class="chartbox"><div id="tooltip" class="tooltip"></div><svg id="matrix" role="img" aria-label="按品牌排列的产品演进时间线"></svg></div><div id="matrixlegend" class="matrixlegend" aria-label="产品类型图例"></div></section>
+<section class="panel matrix" aria-labelledby="matrix-title"><h2 id="matrix-title">阳台储能头部品牌产品演进时间线</h2><p>横轴为上市时间，纵轴按品牌分行。圆点颜色代表产品类型，圆点大小代表单包容量；年份级记录以 * 标示月份未公开。</p><div class="actions"><span id="matrixEditHint" class="small">布局锁定</span><button id="editMatrix">编辑布局</button><button id="resetMatrix">恢复矩阵布局</button><button id="shareMatrix" class="primary">复制云端布局链接</button></div><div class="chartbox"><div id="tooltip" class="tooltip"></div><svg id="matrix" role="img" aria-label="按品牌排列的产品演进时间线"></svg></div><div id="matrixlegend" class="matrixlegend" aria-label="产品类型图例"></div></section>
 <div class="tablebox" tabindex="0" aria-label="产品规格表，参数横向排列，可横向滚动"><table id="table"><thead></thead><tbody></tbody></table></div>
 <footer>离线可用的单文件 HTML；官方链接需联网打开。</footer>
 </main>
@@ -32,7 +32,8 @@ function capacityNumber(r){const text=String(r.capacity||'');if(/主机无电池
 const brandColor={EcoFlow:'#11a681',Anker:'#2674de',Zendure:'#e0a117',Jackery:'#e96832',Marstek:'#8556d6'};
 let matrixEdit=false;
 const matrixLayoutKey='balcony-matrix-layout-v1';
-const matrixLayout=()=>JSON.parse(localStorage.getItem(matrixLayoutKey)||'{}');
+const sharedLayout=()=>{try{const raw=new URLSearchParams(location.hash.slice(1)).get('layout');return raw?JSON.parse(decodeURIComponent(raw)):null}catch{return null}};
+const matrixLayout=()=>sharedLayout()||JSON.parse(localStorage.getItem(matrixLayoutKey)||'{}');
 function quarterLabel(r){const m=String(r.dateNote||'').match(/^(\d{4})(?:-(\d{2}))?/);if(!m)return null;return `${m[1]} Q${m[2]?Math.ceil(Number(m[2])/3):1}`;}
 function renderMatrix(items){
  const brands=['Anker','EcoFlow','Jackery','Marstek','Zendure'].filter(b=>items.some(r=>r.brand===b)),typeColor={'分体式':'#9ba7b8','一体式DC耦合':'#3786ed','一体化AC耦合':'#f0a10b'},pts=items.map(r=>({r,x:quarterLabel(r),cap:capacityNumber(r),monthKnown:/^\d{4}-\d{2}/.test(String(r.dateNote||''))})).filter(p=>p.x),svg=$('matrix'),tip=$('tooltip'),legend=$('matrixlegend'),W=1500,H=Math.max(380,70+brands.length*320),L=120,R=25,T=70,B=28;
@@ -85,5 +86,6 @@ function csvFor(a){const keys=['year','dateNote','brand','model','productType','
 $('export').onclick=()=>{const a=document.createElement('a'),url=URL.createObjectURL(new Blob([csvFor(selectRows(state()))],{type:'text/csv;charset=utf-8'}));a.href=url;a.download='欧洲阳台储能-可编辑版.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);};
 $('editMatrix').onclick=()=>{matrixEdit=!matrixEdit;$('editMatrix').textContent=matrixEdit?'完成布局':'编辑布局';$('matrixEditHint').textContent=matrixEdit?'可拖动产品点与标签':'布局锁定';$('matrix').style.cursor=matrixEdit?'move':'default';};
 $('resetMatrix').onclick=()=>{localStorage.removeItem(matrixLayoutKey);render();};
+$('shareMatrix').onclick=async()=>{const u=new URL(location.href);u.hash='layout='+encodeURIComponent(JSON.stringify(matrixLayout()));history.replaceState(null,'',u);try{await navigator.clipboard.writeText(u.href);$('matrixEditHint').textContent='云端布局链接已复制'}catch{$('matrixEditHint').textContent='布局已写入当前链接，可复制地址栏分享'}};
 render();
 </script></body></html>
