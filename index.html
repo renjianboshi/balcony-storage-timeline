@@ -26,8 +26,16 @@ button.danger:hover{background:#fdeceb}
 td .static.edited::before{content:'\25CF';color:#c79730;font-size:8px;margin-right:4px;vertical-align:2px}
 .rowop{white-space:nowrap}
 .rowop button{padding:4px 9px;font-size:12px}
-#toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(8px);background:#133c31;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;box-shadow:0 8px 26px #18383055;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:99;max-width:80vw}
+#toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(8px);background:#133c31;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;box-shadow:0 8px 26px #18383055;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:99;max-width:80vw;white-space:pre-wrap;line-height:1.5}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.diag-mask{position:fixed;inset:0;background:#18383066;z-index:98;display:flex;align-items:center;justify-content:center}
+.diag{background:#fff;max-width:560px;width:calc(100% - 32px);border-radius:12px;padding:20px 22px;box-shadow:0 14px 40px #18383055;font-size:13px;line-height:1.7}
+.diag h3{margin:0 0 10px;font-size:15px;font-weight:500}
+.diag .item{padding:8px 10px;border:1px solid var(--line);border-radius:8px;margin:6px 0;background:#fbfdfb}
+.diag .ok{color:#14795b;font-weight:500}
+.diag .err{color:#a3362b;font-weight:500}
+.diag .small{color:var(--muted);font-size:12px}
+.diag .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
 </style></head><body>
 <header><small>PRODUCT RESEARCH · EUROPE</small><h1>欧洲阳台储能产品时间线</h1><p>2023 年以来 · EcoFlow / Anker / Zendure / Jackery / Marstek · 核查更新：2026-09-09</p></header>
 <main>
@@ -39,6 +47,7 @@ td .static.edited::before{content:'\25CF';color:#c79730;font-size:8px;margin-rig
   <button id="editTable" class="primary">锁定表格</button>
   <button id="addRow">＋ 新增产品</button>
   <button id="syncNow">立即同步</button>
+  <button id="diagToken">诊断令牌</button>
   <button id="connectGit">连接 GitHub</button>
   <a id="historyLink" href="https://github.com/renjianboshi/balcony-storage-timeline/commits/main/data/overrides.json" target="_blank" rel="noopener noreferrer"><button type="button">云端修改历史</button></a>
   <span id="cloudTime" class="small"></span>
@@ -181,7 +190,7 @@ const ghToken=()=>localStorage.getItem(githubTokenKey)||'';
 let syncTimer=null, syncing=false, remoteSha=null, dirty=false;
 const toastEl=document.createElement('div');toastEl.id='toast';document.body.appendChild(toastEl);
 let toastTimer=null;
-function toast(msg){toastEl.textContent=msg;toastEl.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toastEl.classList.remove('show'),2600);}
+function toast(msg){toastEl.textContent=msg;toastEl.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toastEl.classList.remove('show'),6000);}
 function setSync(cls,text){const el=$('syncStatus');el.className='sync-status '+cls;el.textContent=text;}
 function fmtTime(iso){if(!iso)return '';const d=new Date(iso);return isNaN(d)?'':`${d.getMonth()+1}月${d.getDate()}日 ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;}
 
@@ -232,8 +241,10 @@ async function syncNow(manual){
       const fresh=await ghRead();
       if(fresh){showConflict(await (await fetch(`https://raw.githubusercontent.com/${githubRepo}/${GH_BRANCH}/${OVERRIDES_PATH}?t=`+Date.now(),{cache:'no-store'})).json());syncing=false;return;}
     }
-    if(res.status===401||res.status===403){setSync('err','令牌无效或权限不足');if(manual)toast('令牌无效/权限不足，请重新生成（需要 Contents: Read and write）');syncing=false;return;}
-    if(!res.ok){setSync('err','保存失败 '+res.status);if(manual)toast('保存失败：'+res.status);syncing=false;return;}
+    if(res.status===401){setSync('err','令牌无效');let m='';try{m=(await res.clone().json()).message||''}catch{} if(manual)toast('401 令牌无效\n'+m||'请重新生成 fine-grained token');syncing=false;return;}
+    if(res.status===403){setSync('err','权限不足');let m='';try{m=(await res.clone().json()).message||''}catch{} if(manual)toast('403 权限不足\n'+m||'检查 fine-grained token 是否授权了本仓库 Contents: Read and write');syncing=false;return;}
+    if(res.status===404){setSync('err','未找到');let m='';try{m=(await res.clone().json()).message||''}catch{} if(manual)toast('404\n'+m||'检查仓库名 / 默认分支 / 路径');syncing=false;return;}
+    if(!res.ok){let m='';try{m=(await res.clone().json()).message||''}catch{} setSync('err','保存失败 '+res.status);if(manual)toast('保存失败 '+res.status+'\n'+m);syncing=false;return;}
     const j=await res.json();remoteSha=(j.content&&j.content.sha)||remoteSha;
     dirty=false;localStorage.removeItem(DIRTY_KEY);saveLocalSnapshot();
     const t=new Date();setSync('ok',`已保存到云端 · ${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`);
@@ -359,6 +370,34 @@ $('saveToken').onclick=async()=>{
   await syncNow(true);
 };
 $('clearToken').onclick=()=>{localStorage.removeItem(githubTokenKey);$('tokenBox').hidden=true;remoteSha=null;updateSyncUI();toast('已清除本机令牌');};
+async function diagApi(url,label){
+ const h={Authorization:`Bearer ${ghToken()}`,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'};
+ try{const r=await fetch(url,{headers:h});let body=null;try{body=await r.clone().json()}catch{}
+  if(!r.ok)return {label,ok:false,status:r.status,msg:body&&body.message||r.statusText||'失败'};
+  const parts=[];
+  if(label==='令牌身份'&&body)parts.push('用户 '+body.login);
+  if(label==='仓库可见'&&body)parts.push('仓库 '+body.full_name+(body.private?'（私有）':'（公开）'));
+  if(label==='Contents 读权限'&&body)parts.push('可读取 '+body.name+(body.sha?'（sha '+body.sha.slice(0,7)+'）':''));
+  if(label==='Contents 读权限'&&r.status===404)return {label,ok:false,status:404,msg:'data/overrides.json 不存在（首次保存前属正常）'};
+  return {label,ok:true,status:r.status,msg:parts.join(' · ')||'OK'};
+ }catch(e){return {label,ok:false,status:'网络',msg:e.message}}
+}
+function showDiag(items){
+ const m=document.createElement('div');m.className='diag-mask';m.innerHTML=`<div class="diag" role="dialog" aria-label="令牌诊断"><h3>令牌诊断</h3>${items.map(x=>`<div class="item"><b>${x.label}</b> · <span class="${x.ok?'ok':'err'}">${x.ok?'✓ OK':(x.status||'✗')}</span>${x.msg?`<div class="small">${esc(x.msg)}</div>`:''}</div>`).join('')}<div class="actions"><button class="primary" id="diagClose">关闭</button></div></div>`;
+ document.body.appendChild(m);
+ m.addEventListener('click',e=>{if(e.target===m||e.target.id==='diagClose')document.body.removeChild(m)});
+}
+$('diagToken').onclick=async()=>{
+ if(!ghToken()){$('tokenBox').hidden=false;$('tokenInput').focus();toast('请先连接 GitHub');return;}
+ setSync('busy','正在诊断…');
+ const items=await Promise.all([
+  diagApi('https://api.github.com/user','令牌身份'),
+  diagApi(`https://api.github.com/repos/${githubRepo}`,'仓库可见'),
+  diagApi(`https://api.github.com/repos/${githubRepo}/contents/data/overrides.json`,'Contents 读权限'),
+ ]);
+ showDiag(items);
+ updateSyncUI();
+};
 window.addEventListener('online',()=>{if(dirty&&ghToken())syncNow();});
 window.addEventListener('beforeunload',e=>{if(dirty&&ghToken()){e.preventDefault();e.returnValue='';}});
 
